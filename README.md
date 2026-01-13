@@ -1,0 +1,280 @@
+# AI Code Review Agent
+
+A production-grade autonomous code review system using AWS Bedrock Claude models for GitHub repositories.
+
+## 🚀 Features
+
+- **Three-Agent Architecture**: Planner, Reviewer, and Verifier agents work together for comprehensive code analysis
+- **Enterprise Code Review Checklist**: Applies industry-standard checklist as hard constraints
+- **AWS Bedrock Integration**: Uses Claude 3.5 Sonnet for intelligent code analysis
+- **GitHub Integration**: Automatically posts review comments on PRs and commits
+- **Security-First Design**: No hardcoded credentials, comprehensive input validation
+- **Production Ready**: Structured logging, error handling, and retry logic
+
+## 🏗️ Architecture
+
+### Three-Agent System
+
+1. **Planner Agent** - Determines review strategy
+   - Analyzes changed files and determines review depth
+   - Assigns applicable checklist sections based on file type
+   - Generates structured review tasks
+
+2. **Reviewer Agent** - Performs detailed code analysis
+   - Applies enterprise code review checklist as hard constraints
+   - Identifies security, architecture, and error handling issues
+   - Generates structured findings with severity levels
+
+3. **Verifier Agent** - Quality control and filtering
+   - Calculates confidence scores for findings
+   - Filters out false positives and low-quality findings
+   - Validates severity levels and ensures signal quality
+
+### Code Review Checklist Categories
+
+- **Security**: Input validation, authentication, secure communication
+- **Error Handling**: Exception handling, graceful recovery, logging
+- **Architecture & Design Patterns**: SOLID principles, design patterns
+- **Performance**: Algorithm efficiency, optimization, scalability
+- **Code Quality**: Readability, naming conventions, complexity
+- **Testing**: Coverage, test quality, edge cases
+- **Documentation**: API docs, comments, guides
+- **Maintainability**: Organization, configuration, monitoring
+
+## 🛠️ Setup
+
+### Prerequisites
+
+- Python 3.11+
+- AWS Account with Bedrock access
+- GitHub repository with Actions enabled
+
+### Required Environment Variables
+
+Set these as GitHub repository secrets:
+
+```bash
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_REGION=us-east-1  # or your preferred region
+```
+
+The following are automatically provided by GitHub Actions:
+- `GITHUB_TOKEN` - Automatically provided
+- `GITHUB_ACTOR` - Automatically provided  
+- `GITHUB_REPOSITORY` - Automatically provided
+
+### AWS Bedrock Setup
+
+1. **Enable Claude 3.5 Sonnet in AWS Bedrock**:
+   - Go to AWS Bedrock console
+   - Navigate to "Model access"
+   - Request access to "Claude 3.5 Sonnet" model
+   - Wait for approval (usually instant for most regions)
+
+2. **Create IAM User with Bedrock Permissions**:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "bedrock:InvokeModel"
+         ],
+         "Resource": "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0"
+       }
+     ]
+   }
+   ```
+
+### Installation
+
+1. **Copy the AI Code Review Agent files to your repository**:
+   ```bash
+   # Copy ai_code_review.py to your repository root
+   # Copy .github/workflows/ai-code-review.yml to .github/workflows/
+   ```
+
+2. **Set up GitHub repository secrets**:
+   - Go to your repository Settings → Secrets and variables → Actions
+   - Add the required AWS credentials as repository secrets
+
+3. **Install Python dependencies** (for local testing):
+   ```bash
+   pip install boto3 requests
+   ```
+
+## 🚀 Usage
+
+### Automatic GitHub Actions
+
+The AI Code Review Agent automatically runs on:
+- **Pull Requests**: When opened, updated, or reopened
+- **Push to main branches**: Direct commits to main/master/develop
+
+### Manual Execution
+
+For local testing or manual runs:
+
+```bash
+# Set environment variables
+export AWS_ACCESS_KEY_ID=your_key
+export AWS_SECRET_ACCESS_KEY=your_secret
+export AWS_REGION=us-east-1
+export GITHUB_TOKEN=your_github_token
+export GITHUB_ACTOR=your_username
+export GITHUB_REPOSITORY=owner/repo-name
+
+# Run the code review
+python ai_code_review.py
+```
+
+### Testing the Implementation
+
+Run the test suite to verify everything works:
+
+```bash
+# Test individual agents
+python test_planner.py
+python test_reviewer.py  
+python test_verifier.py
+```
+
+## 📊 Output Examples
+
+### GitHub PR Comments
+
+The agent posts detailed comments on your PRs:
+
+```
+🚨 **SQL Injection Vulnerability**
+
+**Category:** Security
+**Severity:** HIGH
+**Confidence:** 95%
+
+User input is directly concatenated into SQL query without sanitization on line 42. This creates a SQL injection vulnerability that could allow attackers to execute arbitrary database commands.
+
+**Recommendation:** Use parameterized queries or prepared statements instead of string concatenation.
+
+---
+Generated by AI Code Review Agent v1.0.0
+```
+
+### Console Output
+
+```
+🤖 AI Code Review Summary
+
+Total Issues Found: 5
+
+### Issues by Severity
+- 🚨 High: 1 issues
+- ⚠️ Medium: 2 issues  
+- 💡 Low: 2 issues
+
+### Issues by Category
+- Security: 1 issues
+- Error Handling: 2 issues
+- Code Quality: 2 issues
+
+📊 Review Statistics:
+   Files analyzed: 3
+   Review tasks: 3
+   Issues found: 8
+   Final issues: 5
+```
+
+## ⚙️ Configuration
+
+### File Size and Count Limits
+
+```python
+MAX_FILE_SIZE = 1024 * 1024  # 1MB per file
+MAX_FILES_COUNT = 50         # Maximum files per review
+MAX_TOKENS = 4000           # Claude response limit
+```
+
+### Review Depth by File Type
+
+- **Deep Review**: `.py`, `.js`, `.ts`, `.java`, `.cpp`, `.c`
+- **Medium Review**: `.go`, `.rs`, `.php`, `.rb`, `.sql`  
+- **Shallow Review**: `.yaml`, `.yml`, `.json`, `.md`, `.txt`
+
+### Confidence Thresholds
+
+- **High Severity**: 70% confidence required
+- **Medium Severity**: 60% confidence required
+- **Low Severity**: 50% confidence required
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+1. **"AWS Bedrock API error"**
+   - Verify AWS credentials are correct
+   - Ensure Claude 3.5 Sonnet access is enabled in Bedrock
+   - Check AWS region configuration
+
+2. **"No changes detected"**
+   - Ensure git history is available (fetch-depth: 0 in workflow)
+   - Check if files are within size limits
+   - Verify git diff is working correctly
+
+3. **"Failed to post comments to GitHub"**
+   - Verify GITHUB_TOKEN has proper permissions
+   - Check if repository allows PR comments
+   - Ensure workflow has `pull-requests: write` permission
+
+### Debug Mode
+
+Enable detailed logging by modifying the logging level:
+
+```python
+logger.setLevel(logging.DEBUG)
+```
+
+### Testing Locally
+
+```bash
+# Test with a simple change
+echo "print('hello world')" > test.py
+git add test.py
+git commit -m "Test commit"
+
+# Run the review agent
+python ai_code_review.py
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run the test suite
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🔒 Security
+
+- No source code is logged or stored
+- AWS credentials are handled securely
+- All API responses are validated and sanitized
+- Sensitive patterns are filtered from logs
+
+## 📈 Roadmap
+
+- [ ] Support for additional programming languages
+- [ ] Custom checklist configuration
+- [ ] Integration with other CI/CD platforms
+- [ ] Advanced false positive detection
+- [ ] Performance metrics and analytics
+- [ ] Custom severity rules configuration
+
+---
+
+**AI Code Review Agent v1.0.0** - Autonomous code review powered by Claude 3.5 Sonnet
