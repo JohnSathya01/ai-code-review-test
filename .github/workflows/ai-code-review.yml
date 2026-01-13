@@ -43,7 +43,19 @@ jobs:
         run: |
           echo "GITHUB_PR_NUMBER=${{ github.event.number }}" >> $GITHUB_ENV
       
-      - name: Run AI Code Review
+      - name: Check if AWS credentials are available
+        id: check_aws
+        run: |
+          if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "aws_available=true" >> $GITHUB_OUTPUT
+            echo "✅ AWS credentials found - using real AI analysis"
+          else
+            echo "aws_available=false" >> $GITHUB_OUTPUT
+            echo "⚠️ AWS credentials not found - using mock AI for demo"
+          fi
+      
+      - name: Run AI Code Review (Real AWS)
+        if: steps.check_aws.outputs.aws_available == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -54,7 +66,21 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
         run: |
+          echo "🤖 Running AI Code Review with real AWS Bedrock Claude..."
           python ai_code_review.py
+      
+      - name: Run AI Code Review (Mock Mode)
+        if: steps.check_aws.outputs.aws_available == 'false'
+        env:
+          USE_MOCK_AI: 'true'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          echo "🎭 Running AI Code Review with mock responses for demo..."
+          python ai_code_review_mock.py
       
       - name: Upload logs on failure
         if: failure()
